@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::HashMap, fmt, path::PathBuf};
 
 use serde::Deserialize;
 
@@ -148,14 +148,13 @@ pub struct Hit {
     pub latest_version: String,
     pub license: String,
     pub gallery: Vec<String>,
-    pub featured_gallery: Option<String>
+    pub featured_gallery: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Search {
-    pub hits: Vec<Hit>
+    pub hits: Vec<Hit>,
 }
-
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -246,7 +245,7 @@ pub struct QueryParams {
 #[derive(Debug, Deserialize)]
 pub struct Hashes {
     pub sha1: String,
-    pub sha512: String
+    pub sha512: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -256,7 +255,7 @@ pub struct ProjectFile {
     pub filename: String,
     pub primary: bool,
     pub size: u32,
-    pub file_type: Option<String>
+    pub file_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -276,5 +275,58 @@ pub struct VersionProject {
     pub version_type: String,
     pub status: StatusType,
     pub requested_status: Option<RequestedStatusType>,
-    pub files: Vec<ProjectFile>
+    pub files: Vec<ProjectFile>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MRPack {
+    pub dependencies: HashMap<DependencyID, String>,
+    pub files: Vec<ModpackFile>,
+    pub format_version: u32,
+    pub game: String,
+    pub name: String,
+    pub version_id: String,
+    pub summary: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModpackFile {
+    pub path: PathBuf,
+    pub hashes: FileHashes,
+    pub env: Option<Env>,
+    pub downloads: Vec<String>,
+    pub file_size: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FileHashes {
+    pub sha1: String,
+    pub sha512: String,
+    pub other_hashes: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Env {
+    pub client: EnvTypes,
+    pub server: EnvTypes,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum EnvTypes {
+    Required,
+    Optional,
+    Unsupported,
+}
+
+#[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum DependencyID {
+    Minecraft, // Vanilla
+    Forge,
+    Neoforge,
+    FabricLoader,
+    QuiltLoader,
 }

@@ -1,12 +1,21 @@
-use std::{fs::File, io::Write, path::Path, vec};
+use std::{
+    fs::File,
+    io::{BufReader, Write},
+    path::Path,
+    vec,
+};
 
 use reqwest::Client;
+use zip::ZipArchive;
 
-use crate::structs::{FacetFilter, Project, ProjectFile, QueryParams, Search, VersionProject};
+use crate::{
+    errors::SynrinthErrors,
+    structs::{FacetFilter, MRPack, Project, ProjectFile, QueryParams, Search, VersionProject},
+};
 
-pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Option<String> {
+pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, SynrinthErrors> {
     if facets.is_empty() {
-        return None;
+        return Ok(None);
     }
 
     let mut json_facets: Vec<Vec<String>> = vec![];
@@ -18,13 +27,13 @@ pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Option<String> {
     }
 
     if json_facets.is_empty() {
-        return None;
+        return Ok(None);
     }
 
-    Some(serde_json::to_string(&json_facets).unwrap())
+    Ok(Some(serde_json::to_string(&json_facets)?))
 }
 
-pub async fn search(client: &Client, params: QueryParams) -> Search {
+pub async fn search(client: &Client, params: QueryParams) -> Result<Search, SynrinthErrors> {
     let mut url = "https://api.modrinth.com/v2/search".to_string();
     let mut query_parts = vec![];
 
@@ -35,7 +44,7 @@ pub async fn search(client: &Client, params: QueryParams) -> Search {
     }
 
     if let Some(facets) = params.facets {
-        if let Some(facets_str) = build_facets(&facets) {
+        if let Some(facets_str) = build_facets(&facets)? {
             query_parts.push(format!("facets={}", &facets_str));
         }
     }
@@ -44,42 +53,64 @@ pub async fn search(client: &Client, params: QueryParams) -> Search {
         url = format!("{}?{}", url, query_parts.join("&"));
     }
 
-    println!("{}", url);
-
-    let res = client.get(url).send().await.unwrap().bytes().await.unwrap();
-    let json: Search = serde_json::from_slice(&res).unwrap();
-    json
+    let res = client.get(url).send().await?.bytes().await?;
+    let json: Search = serde_json::from_slice(&res)?;
+    Ok(json)
 }
 
-pub async fn get_project(client: &Client, slug: &str) -> Project {
+pub async fn get_project(client: &Client, slug: &str) -> Result<Project, SynrinthErrors> {
     let url = format!("https://api.modrinth.com/v2/project/{}", slug);
-    let res = client.get(url).send().await.unwrap().bytes().await.unwrap();
-    let json: Project = serde_json::from_slice(&res).unwrap();
-    json
+    let res = client.get(url).send().await?.bytes().await?;
+    let json: Project = serde_json::from_slice(&res)?;
+    Ok(json)
 }
 
-pub async fn get_version_project(client: &Client, slug: &str) -> Vec<VersionProject> {
+pub async fn get_version_project(client: &Client, slug: &str) -> Result<Vec<VersionProject>, SynrinthErrors> {
     let url = format!("https://api.modrinth.com/v2/project/{}/version", slug);
-    let res = client.get(url).send().await.unwrap().bytes().await.unwrap();
-    let json: Vec<VersionProject> = serde_json::from_slice(&res).unwrap();
-    json
+    let res = client.get(url).send().await?.bytes().await?;
+    let json: Vec<VersionProject> = serde_json::from_slice(&res)?;
+    Ok(json)
 }
 
-pub async fn download_file(client: &Client, project_file: &ProjectFile, dest: &Path) {
-    let mut res = client.get(&project_file.url).send().await.unwrap();
+pub async fn download_file(client: &Client, project_file: &ProjectFile, dest: &Path) -> Result<(), SynrinthErrors> {
+    let mut res = client.get(&project_file.url).send().await?;
 
-    let mut file = File::create(dest.join(&project_file.filename)).unwrap();
+    let mut file = File::create(dest.join(&project_file.filename))?;
 
-    while let Some(chunk) = res.chunk().await.unwrap() {
-        file.write_all(&chunk).unwrap();
+    while let Some(chunk) = res.chunk().await? {
+        file.write_all(&chunk)?;
     }
+
+    Ok(())
 }
 
-#[tokio::test]
-async fn test() {
-    let client: Client = Client::new();
-    let slug = "xaeros-world-map";
-    let version_projects = get_version_project(&client, &slug).await;
-    let project_file = &version_projects[0].files[0];
-    download_file(&client, &project_file, &Path::new("./")).await;
+pub async fn unpack_mrpack(mrpack: &Path, output_dir: &Path) -> zip::result::ZipResult<()> {
+    let file = File::open(mrpack)?;
+    let reader = BufReader::new(file);
+
+    let mut archive = ZipArchive::new(reader)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let out_path = Path::new(output_dir).join(file.name());
+
+        if file.is_dir() {
+            std::fs::create_dir_all(&out_path)?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut outfile = File::create(&out_path)?;
+            std::io::copy(&mut file, &mut outfile)?;
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn read_modpack_file(modpack: &Path) -> Result<MRPack, SynrinthErrors> {
+    let path = modpack.join("modrinth.index.json");
+    let json = tokio::fs::read_to_string(path).await?;
+    let mrpack: MRPack = serde_json::from_str(&json)?;
+    Ok(mrpack)
 }
