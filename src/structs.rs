@@ -259,7 +259,7 @@ pub struct ProjectFile {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct VersionProject {
+pub struct ProjectVersion {
     pub game_versions: Vec<String>,
     pub loaders: Vec<String>,
     pub id: String,

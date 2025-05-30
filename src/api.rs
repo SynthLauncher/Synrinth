@@ -6,11 +6,12 @@ use std::{
 };
 
 use reqwest::Client;
+use tokio::fs::create_dir_all;
 use zip::ZipArchive;
 
 use crate::{
     errors::SynrinthErrors,
-    structs::{FacetFilter, MRPack, Project, ProjectFile, QueryParams, Search, VersionProject},
+    structs::{FacetFilter, MRPack, ModpackFile, Project, ProjectFile, QueryParams, Search, ProjectVersion},
 };
 
 pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, SynrinthErrors> {
@@ -33,7 +34,7 @@ pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, Sy
     Ok(Some(serde_json::to_string(&json_facets)?))
 }
 
-pub async fn search(client: &Client, params: QueryParams) -> Result<Search, SynrinthErrors> {
+pub async fn query_search(client: &Client, params: QueryParams) -> Result<Search, SynrinthErrors> {
     let mut url = "https://api.modrinth.com/v2/search".to_string();
     let mut query_parts = vec![];
 
@@ -58,23 +59,22 @@ pub async fn search(client: &Client, params: QueryParams) -> Result<Search, Synr
     Ok(json)
 }
 
-pub async fn get_project(client: &Client, slug: &str) -> Result<Project, SynrinthErrors> {
+pub async fn query_project(client: &Client, slug: &str) -> Result<Project, SynrinthErrors> {
     let url = format!("https://api.modrinth.com/v2/project/{}", slug);
     let res = client.get(url).send().await?.bytes().await?;
     let json: Project = serde_json::from_slice(&res)?;
     Ok(json)
 }
 
-pub async fn get_version_project(client: &Client, slug: &str) -> Result<Vec<VersionProject>, SynrinthErrors> {
+pub async fn query_project_versions(client: &Client, slug: &str) -> Result<Vec<ProjectVersion>, SynrinthErrors> {
     let url = format!("https://api.modrinth.com/v2/project/{}/version", slug);
     let res = client.get(url).send().await?.bytes().await?;
-    let json: Vec<VersionProject> = serde_json::from_slice(&res)?;
+    let json: Vec<ProjectVersion> = serde_json::from_slice(&res)?;
     Ok(json)
 }
 
-pub async fn download_file(client: &Client, project_file: &ProjectFile, dest: &Path) -> Result<(), SynrinthErrors> {
+pub async fn download_project_file(client: &Client, project_file: &ProjectFile, dest: &Path) -> Result<(), SynrinthErrors> {
     let mut res = client.get(&project_file.url).send().await?;
-
     let mut file = File::create(dest.join(&project_file.filename))?;
 
     while let Some(chunk) = res.chunk().await? {
@@ -84,7 +84,7 @@ pub async fn download_file(client: &Client, project_file: &ProjectFile, dest: &P
     Ok(())
 }
 
-pub async fn unpack_mrpack(mrpack: &Path, output_dir: &Path) -> zip::result::ZipResult<()> {
+pub async fn unpack_modpack(mrpack: &Path, output_dir: &Path) -> zip::result::ZipResult<()> {
     let file = File::open(mrpack)?;
     let reader = BufReader::new(file);
 
@@ -114,3 +114,84 @@ pub async fn read_modpack_file(modpack: &Path) -> Result<MRPack, SynrinthErrors>
     let mrpack: MRPack = serde_json::from_str(&json)?;
     Ok(mrpack)
 }
+
+pub async fn download_modpack_file(client: &Client, modpack_file: &ModpackFile) -> Result<(), SynrinthErrors> {
+    let mut res = client.get(&modpack_file.downloads[0]).send().await?;
+    
+    if let Some(parent) = modpack_file.path.parent() {
+        create_dir_all(parent).await?;
+    }
+    let mut file = File::create(&modpack_file.path)?;
+
+    while let Some(chunk) = res.chunk().await? {
+        file.write_all(&chunk)?;
+    }
+
+    Ok(())
+}
+
+pub async fn download_modpack_files(client: &Client, modpack_files: &Vec<ModpackFile>) -> Result<(), SynrinthErrors> {
+    for modpack_file in modpack_files {
+        download_modpack_file(&client, &modpack_file).await?;
+    }
+
+    Ok(())
+}
+
+// #[cfg(test)]
+// mod tests {
+//     use std::path::Path;
+
+//     use reqwest::Client;
+
+//     use crate::{api::{download_mod, download_mods, read_modpack_file, search}, errors::SynrinthErrors, structs::{FacetOp, FacetType}};
+
+//     #[tokio::test]
+//     async fn search_test() {
+//         let client = Client::new();
+//         let params = super::QueryParams {
+//             query: Some("map".to_string()),
+//             facets: Some(vec![vec![super::FacetFilter {
+//                 facet: FacetType::Downloads,
+//                 op: FacetOp::Eq,
+//                 value: "1000".to_string(),
+//             }]]),
+//         };
+
+//         let result = search(&client, params).await;
+//         assert!(result.is_ok());
+//     }
+
+//     #[tokio::test]
+//     async fn get_project_test() {
+//         let client = Client::new();
+//         let slug = "map";
+//         let result = super::get_project(&client, slug).await;
+//         assert!(result.is_ok());
+//     }
+
+//     #[tokio::test]
+//     async fn get_version_project_test() {
+//         let client = Client::new();
+//         let slug = "map";
+//         let result = super::get_version_project(&client, slug).await;
+//         assert!(result.is_ok());
+//     }
+
+//     #[tokio::test]
+//     async fn unpack_mrpack_test() {
+//         let mrpack_path = Path::new("./Fabulously.Optimized-v9.0.0-beta.3.mrpack");
+//         let output_dir = Path::new("test_output");
+
+//         let result = super::unpack_mrpack(&mrpack_path, &output_dir).await;
+//         assert!(result.is_ok());
+//     }
+
+//     #[tokio::test]
+//     async fn read_modpack_file_test() -> Result<(), SynrinthErrors> {
+//         let client = Client::new();
+//         let mrpack = read_modpack_file(Path::new("test_output")).await?;
+//         download_mods(&client, &mrpack.files).await?;
+//         Ok(())
+//     }
+// }
