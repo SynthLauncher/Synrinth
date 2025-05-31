@@ -73,7 +73,7 @@ pub async fn query_project_versions(client: &Client, slug: &str) -> Result<Vec<P
     Ok(json)
 }
 
-pub async fn download_project_file(client: &Client, project_file: &ProjectFile, dest: &Path) -> Result<(), SynrinthErrors> {
+pub async fn download_project_file(client: &Client, project_file: &ProjectFile, dest: &Path) -> Result<File, SynrinthErrors> {
     let mut res = client.get(&project_file.url).send().await?;
     let mut file = File::create(dest.join(&project_file.filename))?;
 
@@ -81,7 +81,7 @@ pub async fn download_project_file(client: &Client, project_file: &ProjectFile, 
         file.write_all(&chunk)?;
     }
 
-    Ok(())
+    Ok(file)
 }
 
 pub async fn unpack_modpack(mrpack: &Path, output_dir: &Path) -> zip::result::ZipResult<()> {
@@ -138,60 +138,62 @@ pub async fn download_modpack_files(client: &Client, modpack_files: &Vec<Modpack
     Ok(())
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::path::Path;
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
 
-//     use reqwest::Client;
+    use reqwest::Client;
 
-//     use crate::{api::{download_mod, download_mods, read_modpack_file, search}, errors::SynrinthErrors, structs::{FacetOp, FacetType}};
+    use crate::{api::{download_modpack_files, read_modpack_file}, errors::SynrinthErrors};
 
-//     #[tokio::test]
-//     async fn search_test() {
-//         let client = Client::new();
-//         let params = super::QueryParams {
-//             query: Some("map".to_string()),
-//             facets: Some(vec![vec![super::FacetFilter {
-//                 facet: FacetType::Downloads,
-//                 op: FacetOp::Eq,
-//                 value: "1000".to_string(),
-//             }]]),
-//         };
+    // use crate::{api::{download_mod, download_mods, read_modpack_file, search}, errors::SynrinthErrors, structs::{FacetOp, FacetType}};
 
-//         let result = search(&client, params).await;
-//         assert!(result.is_ok());
-//     }
+    // #[tokio::test]
+    // async fn search_test() {
+    //     let client = Client::new();
+    //     let params = super::QueryParams {
+    //         query: Some("map".to_string()),
+    //         facets: Some(vec![vec![super::FacetFilter {
+    //             facet: FacetType::Downloads,
+    //             op: FacetOp::Eq,
+    //             value: "1000".to_string(),
+    //         }]]),
+    //     };
 
-//     #[tokio::test]
-//     async fn get_project_test() {
-//         let client = Client::new();
-//         let slug = "map";
-//         let result = super::get_project(&client, slug).await;
-//         assert!(result.is_ok());
-//     }
+    //     let result = search(&client, params).await;
+    //     assert!(result.is_ok());
+    // }
 
-//     #[tokio::test]
-//     async fn get_version_project_test() {
-//         let client = Client::new();
-//         let slug = "map";
-//         let result = super::get_version_project(&client, slug).await;
-//         assert!(result.is_ok());
-//     }
+    // #[tokio::test]
+    // async fn get_project_test() {
+    //     let client = Client::new();
+    //     let slug = "map";
+    //     let result = super::get_project(&client, slug).await;
+    //     assert!(result.is_ok());
+    // }
 
-//     #[tokio::test]
-//     async fn unpack_mrpack_test() {
-//         let mrpack_path = Path::new("./Fabulously.Optimized-v9.0.0-beta.3.mrpack");
-//         let output_dir = Path::new("test_output");
+    // #[tokio::test]
+    // async fn get_version_project_test() {
+    //     let client = Client::new();
+    //     let slug = "map";
+    //     let result = super::get_version_project(&client, slug).await;
+    //     assert!(result.is_ok());
+    // }
 
-//         let result = super::unpack_mrpack(&mrpack_path, &output_dir).await;
-//         assert!(result.is_ok());
-//     }
+    #[tokio::test]
+    async fn unpack_mrpack_test() {
+        let mrpack_path = Path::new("./Fabulously.Optimized-v9.0.0-beta.3.mrpack");
+        let output_dir = Path::new("test_output");
 
-//     #[tokio::test]
-//     async fn read_modpack_file_test() -> Result<(), SynrinthErrors> {
-//         let client = Client::new();
-//         let mrpack = read_modpack_file(Path::new("test_output")).await?;
-//         download_mods(&client, &mrpack.files).await?;
-//         Ok(())
-//     }
-// }
+        let result = super::unpack_modpack(&mrpack_path, &output_dir).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn read_modpack_file_test() -> Result<(), SynrinthErrors> {
+        let client = Client::new();
+        let mrpack = read_modpack_file(Path::new("test_output")).await?;
+        download_modpack_files(&client, &mrpack.files).await?;
+        Ok(())
+    }
+}
