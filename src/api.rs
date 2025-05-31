@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::{BufReader, Write},
-    path::Path,
+    path::{Path, PathBuf},
     vec,
 };
 
@@ -73,15 +73,16 @@ pub async fn query_project_versions(client: &Client, slug: &str) -> Result<Vec<P
     Ok(json)
 }
 
-pub async fn download_project_file(client: &Client, project_file: &ProjectFile, dest: &Path) -> Result<File, SynrinthErrors> {
+pub async fn download_project_file(client: &Client, project_file: &ProjectFile, dest: &Path) -> Result<PathBuf, SynrinthErrors> {
     let mut res = client.get(&project_file.url).send().await?;
-    let mut file = File::create(dest.join(&project_file.filename))?;
+    let path = dest.join(&project_file.filename);
+    let mut file = File::create(&path)?;
 
     while let Some(chunk) = res.chunk().await? {
         file.write_all(&chunk)?;
     }
 
-    Ok(file)
+    Ok(path)
 }
 
 pub async fn unpack_modpack(mrpack: &Path, output_dir: &Path) -> zip::result::ZipResult<()> {
