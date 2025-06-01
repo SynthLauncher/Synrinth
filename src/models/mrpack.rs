@@ -55,15 +55,15 @@ pub enum DependencyID {
     QuiltLoader,
 }
 
-impl From<String> for DependencyID {
-    fn from(value: String) -> Self {
-        match value.as_str() {
+impl From<&str> for DependencyID {
+    fn from(value: &str) -> Self {
+        match value {
             "minecraft" => DependencyID::Minecraft,
             "fabric" | "fabric-loader" => DependencyID::FabricLoader,
             "neoforge" => DependencyID::Neoforge,
             "quilt" | "quilt-loader" => DependencyID::QuiltLoader,
             "forge" => DependencyID::Forge,
-            _ => panic!("Couldn't convert the string into Dependency ID")
+            _ => panic!("Couldn't convert the string into Dependency ID"),
         }
     }
 }
