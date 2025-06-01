@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum SynrinthErrors {
+pub enum SynrinthError {
     #[error("[Synrinth] Serialization error: {0}")]
     SerdeError(#[from] serde_json::error::Error),
     #[error("[Synrinth] Request error: {0}")]
