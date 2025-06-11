@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{DonationURL, GalleryImage, License, ModeratorMessage, MonetizationStatus, ProjectType, RequestedStatusType, StatusType, SupportRequirement};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Project {
     pub slug: String,
     pub title: String,
@@ -41,13 +41,13 @@ pub struct Project {
     pub gallery: Vec<GalleryImage>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Hashes {
     pub sha1: String,
     pub sha512: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ProjectFile {
     pub hashes: Hashes,
     pub url: String,
@@ -57,7 +57,7 @@ pub struct ProjectFile {
     pub file_type: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ProjectVersion {
     pub game_versions: Vec<String>,
     pub loaders: Vec<String>,

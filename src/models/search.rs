@@ -1,10 +1,10 @@
 use std::fmt;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{MonetizationStatus, SupportRequirement};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Hit {
     pub slug: String,
     pub title: String,
@@ -31,12 +31,12 @@ pub struct Hit {
     pub featured_gallery: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Search {
     pub hits: Vec<Hit>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FacetType {
     ProjectType,
@@ -56,7 +56,7 @@ pub enum FacetType {
     ModifiedTimestamp,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FacetOp {
     Eq,  // :
@@ -67,7 +67,7 @@ pub enum FacetOp {
     Lt,  // <
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct FacetFilter {
     pub facet: FacetType,
     pub op: FacetOp,
