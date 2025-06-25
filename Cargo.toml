@@ -1,16 +1,17 @@
 [package]
 name = "synrinth"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2024"
 authors = ["STierProgrammer"]
 description = "Rust wrapper for the official Modrinth API "
 repository = "https://github.com/SynthLauncher/Synrinth"
 license = "MIT"
 
+[dev-dependencies]
+tokio = { version = "1.45.1", features = ["macros", "rt"] } 
+
 [dependencies]
-reqwest = "0.12.18"
+reqwest = { version = "0.12.18", features = ["json"]}
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-thiserror = "2.0.12"
-tokio = { version = "1.45.1", features = ["full"] }
 zip = "4.0.0"

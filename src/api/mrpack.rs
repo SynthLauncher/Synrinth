@@ -1,11 +1,9 @@
 use std::{fs::File, io::{BufReader, Write}, path::Path};
 
 use reqwest::Client;
-use tokio::fs::create_dir_all;
 use zip::ZipArchive;
 
-use crate::{errors::SynrinthError, models::mrpack::{MRPack, ModpackFile}};
-
+use crate::{models::mrpack::{MRPack, ModpackFile}};
 
 pub async fn unpack_modpack(mrpack: &Path, output_dir: &Path) -> zip::result::ZipResult<()> {
     let file = File::open(mrpack)?;
@@ -31,20 +29,23 @@ pub async fn unpack_modpack(mrpack: &Path, output_dir: &Path) -> zip::result::Zi
     Ok(())
 }
 
-pub async fn read_modpack_file(modpack: &Path) -> Result<MRPack, SynrinthError> {
+pub fn read_modpack_file<E>(modpack: &Path) -> Result<MRPack, E> 
+    where E: From<std::io::Error> + From<serde_json::Error>
+{
     let path = modpack.join("modrinth.index.json");
-    let json = tokio::fs::read_to_string(path).await?;
-    let mrpack: MRPack = serde_json::from_str(&json)?;
-    Ok(mrpack)
+    let json = std::fs::read_to_string(path)?;
+    Ok(serde_json::from_str(&json)?)
 }
 
-pub async fn download_modpack_file(client: &Client, instance_path: &Path, modpack_file: &ModpackFile) -> Result<(), SynrinthError> {
+pub async fn download_modpack_file<E>(client: &Client, instance_path: &Path, modpack_file: &ModpackFile) -> Result<(), E> 
+    where E: From<std::io::Error> + From<reqwest::Error>
+{
     let mut res = client.get(&modpack_file.downloads[0]).send().await?;
     let path = instance_path.join(&modpack_file.path);
     if let Some(parent) = path.parent() {
-        create_dir_all(parent).await?;
+        std::fs::create_dir_all(parent)?;
     }
-    let mut file = File::create(&path)?;
+    let mut file = std::fs::File::create(&path)?;
 
     while let Some(chunk) = res.chunk().await? {
         file.write_all(&chunk)?;
@@ -53,9 +54,11 @@ pub async fn download_modpack_file(client: &Client, instance_path: &Path, modpac
     Ok(())
 }
 
-pub async fn download_modpack_files(client: &Client, instance_path: &Path, modpack_files: &Vec<ModpackFile>) -> Result<(), SynrinthError> {
+pub async fn download_modpack_files<E>(client: &Client, instance_path: &Path, modpack_files: &[ModpackFile]) -> Result<(), E> 
+    where E: From<std::io::Error> + From<reqwest::Error>
+{
     for modpack_file in modpack_files {
-        download_modpack_file(&client, &instance_path, &modpack_file).await?;
+        download_modpack_file::<E>(&client, &instance_path, &modpack_file).await?;
     }
 
     Ok(())

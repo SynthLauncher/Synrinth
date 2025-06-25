@@ -1,8 +1,10 @@
 use reqwest::Client;
 
-use crate::{errors::SynrinthError, models::search::{FacetFilter, QueryParams, Search}};
+use crate::{models::search::{FacetFilter, QueryParams, Search}};
 
-pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, SynrinthError> {
+pub fn build_facets<E>(facets: &[&[FacetFilter]]) -> Result<Option<String>, E> 
+    where E: From<serde_json::error::Error>
+{
     if facets.is_empty() {
         return Ok(None);
     }
@@ -22,7 +24,9 @@ pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, Sy
     Ok(Some(serde_json::to_string(&json_facets)?))
 }
 
-pub async fn query_search(client: &Client, params: QueryParams) -> Result<Search, SynrinthError> {
+pub async fn query_search<E>(client: &Client, params: QueryParams) -> Result<Search, E> 
+    where E: From<reqwest::Error> + From<serde_json::error::Error>
+{
     let mut url = "https://api.modrinth.com/v2/search".to_string();
     let mut query_parts = vec![];
 
@@ -33,7 +37,8 @@ pub async fn query_search(client: &Client, params: QueryParams) -> Result<Search
     }
 
     if let Some(facets) = params.facets {
-        if let Some(facets_str) = build_facets(&facets)? {
+        let inner: Vec<&[FacetFilter]> = facets.iter().map(|x| x.as_slice()).collect();
+        if let Some(facets_str) = build_facets::<E>(&inner)? {
             query_parts.push(format!("facets={}", &facets_str));
         }
     }
@@ -42,7 +47,6 @@ pub async fn query_search(client: &Client, params: QueryParams) -> Result<Search
         url = format!("{}?{}", url, query_parts.join("&"));
     }
 
-    let res = client.get(url).send().await?.bytes().await?;
-    let json: Search = serde_json::from_slice(&res)?;
+    let json = client.get(url).send().await?.json().await?;
     Ok(json)
 }
