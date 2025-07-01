@@ -1,9 +1,10 @@
 use std::{fs::File, io::{BufReader, Write}, path::Path};
 use reqwest::Client;
+use thiserror::Error;
 use zip::ZipArchive;
 use crate::models::mrpack::{MRPack, ModpackFile};
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
 pub enum ModpackError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -16,7 +17,7 @@ pub enum ModpackError {
 }
 
 pub async fn unpack_modpack(mrpack: &Path, output_dir: &Path) -> Result<(), ModpackError> {
-    let archive = ZipArchive::new(BufReader::new(File::open(mrpack)?))?;
+    let mut archive = ZipArchive::new(BufReader::new(File::open(mrpack)?))?;
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;

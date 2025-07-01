@@ -1,4 +1,7 @@
-use crate::models::project::{Project, ProjectFile, ProjectVersion};
+use crate::{
+    errors::SynrinthError,
+    models::project::{Project, ProjectFile, ProjectVersion},
+};
 use reqwest::Client;
 use std::{
     io::Write,
@@ -21,16 +24,13 @@ use std::{
 /// ```no_run
 /// async fn run() -> Result<(), Box<dyn std::error::Error>> {
 ///     let client = reqwest::Client::new();
-///     let project = query_project::<Box<dyn std::error::Error>>(&client, "map").await?;
+///     let project = query_project(&client, "map").await?;
 ///     println!("{:#?}", project);
 ///     Ok(())
 /// }
 /// ```
 #[must_use]
-pub async fn query_project<E>(client: &Client, slug: &str) -> Result<Project, E>
-where
-    E: From<reqwest::Error> + From<serde_json::Error>,
-{
+pub async fn query_project(client: &Client, slug: &str) -> Result<Project, SynrinthError> {
     let url = format!("https://api.modrinth.com/v2/project/{}", slug);
     let json = client.get(url).send().await?.json().await?;
     Ok(json)
@@ -52,7 +52,7 @@ where
 /// ```no_run
 /// async fn run() -> Result<(), Box<dyn std::error::Error>> {
 ///     let client = reqwest::Client::new();
-///     let projects = query_project_versions::<Box<dyn std::error::Error>>(&client, "map").await?;
+///     let projects = query_project_versions(&client, "map").await?;
 ///     
 ///     for project in projects {
 ///         println!("{:#?}", project);
@@ -62,13 +62,10 @@ where
 /// }
 /// ```
 #[must_use]
-pub async fn query_project_versions<E>(
+pub async fn query_project_versions(
     client: &Client,
     slug: &str,
-) -> Result<Vec<ProjectVersion>, E>
-where
-    E: From<reqwest::Error> + From<serde_json::Error>,
-{
+) -> Result<Vec<ProjectVersion>, SynrinthError> {
     let url = format!("https://api.modrinth.com/v2/project/{}/version", slug);
     let json = client.get(url).send().await?.json().await?;
     Ok(json)
@@ -97,14 +94,11 @@ where
 /// }
 /// ```
 #[must_use]
-pub async fn query_project_version<E>(
+pub async fn query_project_version(
     client: &Client,
     slug: &str,
     version: &str,
-) -> Result<ProjectVersion, E>
-where
-    E: From<reqwest::Error> + From<serde_json::Error>,
-{
+) -> Result<ProjectVersion, SynrinthError> {
     let url = format!(
         "https://api.modrinth.com/v2/project/{}/version/{}",
         slug, version
@@ -137,14 +131,11 @@ where
 /// # Ok(())
 /// # }
 /// ```
-pub async fn download_project_file<E>(
+pub async fn download_project_file(
     client: &Client,
     project_file: &ProjectFile,
     dest: &Path,
-) -> Result<PathBuf, E>
-where
-    E: From<reqwest::Error> + From<std::io::Error>,
-{
+) -> Result<PathBuf, SynrinthError> {
     let mut res = client.get(&project_file.url).send().await?;
     let path = dest.join(&project_file.filename);
     let mut file = std::fs::File::create(&path)?;
@@ -162,19 +153,20 @@ mod tests {
     use reqwest::Client;
 
     #[tokio::test]
-    async fn query_project_test() {
+    async fn query_project_test() -> Result<(), Box<dyn std::error::Error>> {
         let client = Client::new();
 
-        match query_project::<Box<dyn std::error::Error>>(&client, "map").await {
-            Ok(project) => println!("{:#?}", project),
-            Err(e) => panic!("query_project failed: {}", e),
-        }
+        let project = query_project(&client, "map").await?;
+
+        println!("{:#?}", project);
+
+        Ok(())
     }
 
     #[tokio::test]
     async fn query_project_versions_test() -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
-        let projects = query_project_versions::<Box<dyn std::error::Error>>(&client, "map").await?;
+        let projects = query_project_versions(&client, "map").await?;
 
         for project in projects {
             println!("{:#?}", project);
@@ -186,7 +178,8 @@ mod tests {
     #[tokio::test]
     async fn query_project_version_test() -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
-        let project_version = query_project_version::<Box<dyn std::error::Error>>(&client, "map", "1.2").await?;
+        let project_version =
+            query_project_version(&client, "map", "1.2").await?;
 
         println!("{:#?}", project_version);
 
