@@ -16,7 +16,7 @@ pub enum ModpackError {
 }
 
 pub async fn unpack_modpack(mrpack: &Path, output_dir: &Path) -> Result<(), ModpackError> {
-    let archive = ZipArchive::new(BufReader::new(File::open(mrpack)?))?;
+    let mut archive = ZipArchive::new(BufReader::new(File::open(mrpack)?))?;
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
