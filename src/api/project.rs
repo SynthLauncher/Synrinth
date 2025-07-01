@@ -1,10 +1,10 @@
 use crate::{
-    errors::SynrinthError,
+    errors::SynrinthErr,
     models::project::{Project, ProjectFile, ProjectVersion},
 };
 use reqwest::Client;
 use std::{
-    io::Write,
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
 
@@ -30,7 +30,7 @@ use std::{
 /// }
 /// ```
 #[must_use]
-pub async fn query_project(client: &Client, slug: &str) -> Result<Project, SynrinthError> {
+pub async fn query_project(client: &Client, slug: &str) -> Result<Project, SynrinthErr> {
     let url = format!("https://api.modrinth.com/v2/project/{}", slug);
     let json = client.get(url).send().await?.json().await?;
     Ok(json)
@@ -65,7 +65,7 @@ pub async fn query_project(client: &Client, slug: &str) -> Result<Project, Synri
 pub async fn query_project_versions(
     client: &Client,
     slug: &str,
-) -> Result<Vec<ProjectVersion>, SynrinthError> {
+) -> Result<Vec<ProjectVersion>, SynrinthErr> {
     let url = format!("https://api.modrinth.com/v2/project/{}/version", slug);
     let json = client.get(url).send().await?.json().await?;
     Ok(json)
@@ -98,7 +98,7 @@ pub async fn query_project_version(
     client: &Client,
     slug: &str,
     version: &str,
-) -> Result<ProjectVersion, SynrinthError> {
+) -> Result<ProjectVersion, SynrinthErr> {
     let url = format!(
         "https://api.modrinth.com/v2/project/{}/version/{}",
         slug, version
@@ -107,41 +107,19 @@ pub async fn query_project_version(
     Ok(json)
 }
 
-/// Downloads the file specified by `project_file` to the given destination directory.
-///
-/// # Arguments
-///
-/// * `client` - A reqwest HTTP client to perform the request.
-/// * `project_file` - A reference to the [`ProjectFile`] containing the URL and filename.
-/// * `dest` - The directory path where the file should be saved.
-///
-/// # Returns
-///
-/// Returns a `Result` containing the full path to the downloaded file on success,
-/// or an error `E` convertible from either `reqwest::Error` or `std::io::Error`.
-///
-/// # Example
-///
-/// ```no_run
-/// # async fn download_example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = reqwest::Client::new();
-/// # let project_file = /* get ProjectFile */ todo!();
-/// let path = download_project_file::<Box<dyn std::error::Error>>(&client, &project_file, std::path::Path::new("/tmp")).await?;
-/// println!("Downloaded to {:?}", path);
-/// # Ok(())
-/// # }
-/// ```
 pub async fn download_project_file(
     client: &Client,
     project_file: &ProjectFile,
     dest: &Path,
-) -> Result<PathBuf, SynrinthError> {
+) -> Result<PathBuf, SynrinthErr> {
     let mut res = client.get(&project_file.url).send().await?;
     let path = dest.join(&project_file.filename);
-    let mut file = std::fs::File::create(&path)?;
+
+    let file = std::fs::File::create(&path)?;
+    let mut writer = BufWriter::new(file);
 
     while let Some(chunk) = res.chunk().await? {
-        file.write_all(&chunk)?;
+        writer.write_all(&chunk)?;
     }
 
     Ok(path)
@@ -178,8 +156,7 @@ mod tests {
     #[tokio::test]
     async fn query_project_version_test() -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
-        let project_version =
-            query_project_version(&client, "map", "1.2").await?;
+        let project_version = query_project_version(&client, "map", "1.2").await?;
 
         println!("{:#?}", project_version);
 

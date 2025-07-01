@@ -4,7 +4,7 @@ pub mod project;
 pub mod search;
 pub mod mrpack;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum ProjectType {
     Mod,
@@ -13,7 +13,7 @@ pub enum ProjectType {
     Shader,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum SupportRequirement {
     Required,
@@ -22,7 +22,7 @@ pub enum SupportRequirement {
     Unknown,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum StatusType {
     Approved,
@@ -38,7 +38,7 @@ pub enum StatusType {
     Unknown,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum RequestedStatusType {
     Approved,
@@ -49,7 +49,7 @@ pub enum RequestedStatusType {
     Draft,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum MonetizationStatus {
     Monetized,
@@ -57,7 +57,7 @@ pub enum MonetizationStatus {
     ForceDemonetized,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct GalleryImage {
     pub url: String,
     pub featured: bool,
@@ -67,20 +67,20 @@ pub struct GalleryImage {
     pub ordering: i32,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct License {
+    pub url: Option<String>,
     pub id: String,
     pub name: String,
-    pub url: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ModeratorMessage {
     pub message: String,
     pub body: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DonationURL {
     pub id: String,
     pub platform: String,

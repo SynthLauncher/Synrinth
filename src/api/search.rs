@@ -1,15 +1,16 @@
 use reqwest::Client;
 
-use crate::{models::search::{FacetFilter, QueryParams, Search}};
+use crate::{
+    errors::SynrinthErr,
+    models::search::{FacetFilter, QueryParams, Search},
+};
 
-pub fn build_facets<E>(facets: &[&[FacetFilter]]) -> Result<Option<String>, E> 
-    where E: From<serde_json::error::Error>
-{
+pub fn build_facets(facets: &[&[FacetFilter]]) -> Result<Option<String>, SynrinthErr> {
     if facets.is_empty() {
         return Ok(None);
     }
 
-    let mut json_facets: Vec<Vec<String>> = vec![];
+    let mut json_facets: Vec<Vec<String>> = Vec::new();
 
     for group in facets {
         if !group.is_empty() {
@@ -24,11 +25,11 @@ pub fn build_facets<E>(facets: &[&[FacetFilter]]) -> Result<Option<String>, E>
     Ok(Some(serde_json::to_string(&json_facets)?))
 }
 
-pub async fn query_search<E>(client: &Client, params: QueryParams) -> Result<Search, E> 
-    where E: From<reqwest::Error> + From<serde_json::error::Error>
-{
-    let mut url = "https://api.modrinth.com/v2/search".to_string();
-    let mut query_parts = vec![];
+pub async fn query_search<'a>(
+    client: &Client,
+    params: QueryParams<'a>,
+) -> Result<Search, SynrinthErr> {
+    let mut query_parts = Vec::new();
 
     if let Some(query) = params.query {
         if !query.trim().is_empty() {
@@ -36,17 +37,34 @@ pub async fn query_search<E>(client: &Client, params: QueryParams) -> Result<Sea
         }
     }
 
+    if let Some(index) = params.index {
+        query_parts.push(format!("index={}", &index));
+    }
+
+    if let Some(limit) = params.limit {
+        query_parts.push(format!("limit={}", &limit));
+    }
+
+    if let Some(offset) = params.offset {
+        query_parts.push(format!("offset={}", offset));
+    }
+
     if let Some(facets) = params.facets {
-        let inner: Vec<&[FacetFilter]> = facets.iter().map(|x| x.as_slice()).collect();
-        if let Some(facets_str) = build_facets::<E>(&inner)? {
+        if let Some(facets_str) = build_facets(facets)? {
             query_parts.push(format!("facets={}", &facets_str));
         }
     }
 
-    if !query_parts.is_empty() {
-        url = format!("{}?{}", url, query_parts.join("&"));
-    }
+    let url = if query_parts.is_empty() {
+        "https://api.modrinth.com/v2/search".to_string()
+    } else {
+        format!(
+            "https://api.modrinth.com/v2/search?{}",
+            query_parts.join("&")
+        )
+    };
 
     let json = client.get(url).send().await?.json().await?;
     Ok(json)
 }
+

@@ -117,7 +117,10 @@ impl fmt::Display for FacetFilter {
     }
 }
 
-pub struct QueryParams {
-    pub query: Option<String>,
-    pub facets: Option<Vec<Vec<FacetFilter>>>,
+pub struct QueryParams<'a> {
+    pub query: Option<&'a str>,
+    pub facets: Option<&'a [&'a [FacetFilter]]>,
+    pub index: Option<&'a str>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
 }
