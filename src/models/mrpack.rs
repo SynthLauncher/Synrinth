@@ -1,6 +1,11 @@
 use std::{collections::HashMap, path::PathBuf};
-
 use serde::Deserialize;
+
+#[derive(Debug, thiserror::Error)]
+pub enum MRPackError {
+    #[error("Invalid dependency ID: {0}")]
+    InvalidDependency(String),
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,22 +53,24 @@ pub enum EnvTypes {
 #[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum DependencyID {
-    Minecraft, // Vanilla
+    Minecraft,
     Forge,
     Neoforge,
     FabricLoader,
     QuiltLoader,
 }
 
-impl From<&str> for DependencyID {
-    fn from(value: &str) -> Self {
+impl TryFrom<&str> for DependencyID {
+    type Error = MRPackError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "minecraft" => DependencyID::Minecraft,
-            "fabric" | "fabric-loader" => DependencyID::FabricLoader,
-            "neoforge" => DependencyID::Neoforge,
-            "quilt" | "quilt-loader" => DependencyID::QuiltLoader,
-            "forge" => DependencyID::Forge,
-            _ => panic!("Couldn't convert the string into Dependency ID"),
+            "minecraft" => Ok(Self::Minecraft),
+            "fabric" | "fabric-loader" => Ok(Self::FabricLoader),
+            "neoforge" => Ok(Self::Neoforge),
+            "quilt" | "quilt-loader" => Ok(Self::QuiltLoader),
+            "forge" => Ok(Self::Forge),
+            invalid => Err(MRPackError::InvalidDependency(invalid.to_string())),
         }
     }
 }
