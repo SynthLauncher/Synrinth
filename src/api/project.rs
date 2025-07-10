@@ -17,11 +17,11 @@ use std::{
 ///
 /// # Returns
 ///
-/// Returns a `Result` with deserialized `Project` on success,
-/// on an Error `E` convertible from either `reqwest::Error` or `serde_json::Error`
+/// Returns a `Result` with deserialized `Project` on success.
 ///
 /// # Example
 /// ```no_run
+/// use synrinth::api::project::query_project;
 /// async fn run() -> Result<(), Box<dyn std::error::Error>> {
 ///     let client = reqwest::Client::new();
 ///     let project = query_project(&client, "map").await?;
@@ -45,11 +45,11 @@ pub async fn query_project(client: &Client, slug: &str) -> Result<Project, Synri
 ///
 /// # Returns
 ///
-/// Returns a `Result` with Vec<ProjectVersion> on success,
-/// or an Error `E` convertible from either `reqwest::Error or `serde_json::Error`
+/// Returns a `Result` with Vec<ProjectVersion> on success.
 ///
 /// # Example
 /// ```no_run
+/// use synrinth::api::project::query_project_versions;
 /// async fn run() -> Result<(), Box<dyn std::error::Error>> {
 ///     let client = reqwest::Client::new();
 ///     let projects = query_project_versions(&client, "map").await?;
@@ -81,14 +81,14 @@ pub async fn query_project_versions(
 ///
 /// # Returns
 ///
-/// Returns a `Result` with ProjectVersion on success,
-/// or an Error `E` convertible from either `reqwest::Error` or `serde_json::Error`
+/// Returns a `Result` with ProjectVersion on success.
 ///
 /// # Example
 /// ```no_run
+/// use synrinth::api::project::query_project_version;
 /// async fn run() -> Result<(), Box<dyn std::error::Error>> {
 ///     let client = reqwest::Client::new();
-///     let project_version = query_project_version::<Box<dyn std::error::Error>>(&client, "map", "1.2").await?;
+///     let project_version = query_project_version(&client, "map", "1.2").await?;
 ///     println!("{:#?}", project_version);
 ///     Ok(())
 /// }
@@ -107,6 +107,7 @@ pub async fn query_project_version(
     Ok(json)
 }
 
+
 pub async fn download_project_file(
     client: &Client,
     project_file: &ProjectFile,
@@ -123,43 +124,4 @@ pub async fn download_project_file(
     }
 
     Ok(path)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::api::project::{query_project, query_project_version, query_project_versions};
-    use reqwest::Client;
-
-    #[tokio::test]
-    async fn query_project_test() -> Result<(), Box<dyn std::error::Error>> {
-        let client = Client::new();
-
-        let project = query_project(&client, "map").await?;
-
-        println!("{:#?}", project);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn query_project_versions_test() -> Result<(), Box<dyn std::error::Error>> {
-        let client = reqwest::Client::new();
-        let projects = query_project_versions(&client, "map").await?;
-
-        for project in projects {
-            println!("{:#?}", project);
-        }
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn query_project_version_test() -> Result<(), Box<dyn std::error::Error>> {
-        let client = reqwest::Client::new();
-        let project_version = query_project_version(&client, "map", "1.2").await?;
-
-        println!("{:#?}", project_version);
-
-        Ok(())
-    }
 }

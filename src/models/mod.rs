@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 pub mod project;
 pub mod search;
-pub mod mrpack;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
