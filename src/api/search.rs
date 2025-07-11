@@ -5,7 +5,7 @@ use crate::{
     models::search::{FacetFilter, QueryParams, Search},
 };
 
-pub fn build_facets(facets: &[&[FacetFilter]]) -> Result<Option<String>, SynrinthErr> {
+pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, SynrinthErr> {
     if facets.is_empty() {
         return Ok(None);
     }
@@ -25,9 +25,9 @@ pub fn build_facets(facets: &[&[FacetFilter]]) -> Result<Option<String>, Synrint
     Ok(Some(serde_json::to_string(&json_facets)?))
 }
 
-pub async fn query_search<'a>(
+pub async fn query_search(
     client: &Client,
-    params: QueryParams<'a>,
+    params: QueryParams,
 ) -> Result<Search, SynrinthErr> {
     let mut query_parts = Vec::new();
 
@@ -50,7 +50,7 @@ pub async fn query_search<'a>(
     }
 
     if let Some(facets) = params.facets {
-        if let Some(facets_str) = build_facets(facets)? {
+        if let Some(facets_str) = build_facets(&facets)? {
             query_parts.push(format!("facets={}", &facets_str));
         }
     }
