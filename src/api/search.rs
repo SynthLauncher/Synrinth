@@ -5,6 +5,33 @@ use crate::{
     models::search::{FacetFilter, QueryParams, Search},
 };
 
+#[macro_export]
+macro_rules! facet_filters {
+    (
+        $( [ $($facet:ident $op:tt $val:expr),+ ] ),+
+    ) => {{
+        use $crate::models::search::{FacetFilter, FacetType, FacetOp};
+        let mut filters = Vec::new();
+
+        $(
+            let mut group = Vec::new();
+            $(
+                let op = stringify!($op).into();
+
+                group.push(FacetFilter {
+                    facet: FacetType::$facet,
+                    op,
+                    value: $val.to_string(),
+                });
+            )+
+
+            filters.push(group);
+        )+
+
+        filters
+    }};
+}
+
 pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, SynrinthErr> {
     if facets.is_empty() {
         return Ok(None);
@@ -25,10 +52,7 @@ pub fn build_facets(facets: &Vec<Vec<FacetFilter>>) -> Result<Option<String>, Sy
     Ok(Some(serde_json::to_string(&json_facets)?))
 }
 
-pub async fn query_search(
-    client: &Client,
-    params: QueryParams,
-) -> Result<Search, SynrinthErr> {
+pub async fn query_search(client: &Client, params: QueryParams) -> Result<Search, SynrinthErr> {
     let mut query_parts = Vec::new();
 
     if let Some(query) = params.query {
@@ -67,4 +91,3 @@ pub async fn query_search(
     let json = client.get(url).send().await?.json().await?;
     Ok(json)
 }
-

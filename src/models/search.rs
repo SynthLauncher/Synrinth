@@ -67,6 +67,21 @@ pub enum FacetOp {
     Lt,  // <
 }
 
+impl From<&str> for FacetOp {
+    fn from(op: &str) -> Self {
+        match op {
+            "==" => FacetOp::Eq,
+            "!=" => FacetOp::Neq,
+            ">"  => FacetOp::Gt,
+            "<"  => FacetOp::Lt,
+            ">=" => FacetOp::Gte,
+            "<=" => FacetOp::Lte,
+            _ => panic!("Unsupported FacetOp string: {}", op),
+        }
+    }
+}
+
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FacetFilter {
     pub facet: FacetType,
@@ -117,6 +132,7 @@ impl fmt::Display for FacetFilter {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize)]
 pub struct QueryParams {
     pub query: Option<String>,
     pub facets: Option<Vec<Vec<FacetFilter>>>,
